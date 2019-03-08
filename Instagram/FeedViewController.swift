@@ -11,12 +11,17 @@ import Parse
 import AlamofireImage
 
 class FeedViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
+    
+    let myRefreshControl = UIRefreshControl()
    
     @IBOutlet weak var tableView: UITableView!
     var posts = [PFObject]()
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        loadPosts()
+        myRefreshControl.addTarget(self, action: #selector(loadPosts), for: .valueChanged)
+        tableView.refreshControl = myRefreshControl
         
         tableView.delegate = self
         tableView.dataSource = self
@@ -25,6 +30,7 @@ class FeedViewController: UIViewController, UITableViewDelegate, UITableViewData
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        self.loadPosts()
         
         let query = PFQuery(className:"Posts")
         query.includeKey("author")
@@ -37,8 +43,11 @@ class FeedViewController: UIViewController, UITableViewDelegate, UITableViewData
             }
         }
     }
-        
-    
+    @objc func loadPosts(){
+        self.tableView.reloadData()
+        self.myRefreshControl.endRefreshing()
+    }
+   
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return posts.count
     }
@@ -50,7 +59,7 @@ class FeedViewController: UIViewController, UITableViewDelegate, UITableViewData
         let user = post["author"] as! PFUser
         
         cell.usernameLabel.text = user.username
-        cell.captionLabel.text = post["caption"] as! String
+        cell.captionLabel.text = post["caption"] as? String
         
         let imageFile = post["image"] as! PFFileObject
         let urlString = imageFile.url!
@@ -58,6 +67,12 @@ class FeedViewController: UIViewController, UITableViewDelegate, UITableViewData
         
         cell.photoView.af_setImage(withURL: url)
         
+        if #available(iOS 10.0, *) {
+            tableView.refreshControl = myRefreshControl
+        } else {
+            tableView.addSubview(myRefreshControl)
+        }
+        myRefreshControl.attributedTitle = NSMutableAttributedString(string: "Fetching Posts ...")
         return cell
     }
 
